@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Optimum – Data movement sets the ceiling</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--tx:#eaf0ff;--mu:#8a93b8;--ac:#4de3ff;--vi:#b28cff;--rd:#ff5d73;--am:#ffc857;--bd:rgba(150,170,255,.22);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{background:#000;scroll-behavior:smooth;height:100%}
+body{margin:0;background:#000;color:var(--tx);font:400 16px/1.6 'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',sans-serif}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+nav,main,footer{position:relative;z-index:1}
+nav{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:5;display:flex;gap:22px;padding:16px 5vw;background:linear-gradient(#000c,transparent)}
+nav b{margin-right:auto;font-weight:800;letter-spacing:.02em}
+nav a{color:var(--mu);text-decoration:none;font-size:14px}nav a:hover{color:var(--ac)}
+@media(max-width:700px){nav a{display:none}}
+.sc{position:relative;height:92vh;min-height:540px;overflow:hidden}
+.sc canvas{position:absolute;inset:0;width:100%;height:100%}
+.tx{position:absolute;left:5vw;top:11vh;max-width:min(500px,90vw);z-index:2;pointer-events:none}
+.tx h2{margin:0 0 8px;font-weight:800;font-size:clamp(26px,3.6vw,44px);line-height:1.12;letter-spacing:-.02em}
+.tx p{margin:0;color:var(--mu);font-size:15px}
+.hero .tx{top:50%;transform:translateY(-50%);max-width:min(640px,90vw)}
+h1{margin:0 0 18px;font-weight:800;font-size:clamp(38px,6.6vw,84px);line-height:1.04;letter-spacing:-.03em}
+.hero p{font-size:18px;color:var(--tx);opacity:.8}
+.hud{position:absolute;left:5vw;bottom:7vh;z-index:2;pointer-events:none;max-width:60vw;color:var(--mu);font-size:14px}
+.hud strong{display:block;color:var(--tx);font-size:clamp(26px,4vw,48px);font-variant-numeric:tabular-nums;line-height:1.1}
+.lb{position:absolute;z-index:2;pointer-events:none;font-size:14px;font-weight:600}
+.lb b{font-variant-numeric:tabular-nums}
+.ctl{position:absolute;right:5vw;bottom:7vh;z-index:3;display:flex;gap:10px}
+button{font:600 14px 'Be Vietnam Pro',system-ui,sans-serif;color:var(--tx);background:#0006;border:1px solid var(--ac);border-radius:99px;padding:10px 20px;cursor:pointer;box-shadow:0 0 14px #4de3ff33}
+button:hover{background:#4de3ff22}
+:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.bw{position:absolute;right:5vw;bottom:7vh;z-index:2;font-size:13px;color:var(--mu);text-align:right}
+.dots i{display:inline-block;width:9px;height:9px;margin:3px;border-radius:50%}
+.dots .r{background:var(--rd);box-shadow:0 0 8px var(--rd)}.dots .c{background:var(--ac);box-shadow:0 0 10px var(--ac)}.dots .off{background:#fff2}
+.chips{position:absolute;left:5vw;right:5vw;bottom:6vh;z-index:2;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:14px;color:var(--mu)}
+.chips div{border-left:2px solid var(--bd);padding-left:12px}.chips b{display:block;color:var(--tx)}
+.rm{padding:14vh 5vw 10vh;max-width:1100px;margin:0 auto}
+.rm h2{font-weight:800;font-size:clamp(26px,3.6vw,44px);margin:0 0 40px}
+.rl{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative}
+.rl:before{content:"";position:absolute;left:0;right:0;top:7px;height:1px;background:linear-gradient(90deg,var(--ac),var(--vi),transparent)}
+.rl div{position:relative;padding-top:34px;color:var(--mu);font-size:15px}.rl b{display:block;color:var(--tx);font-size:18px}
+.rl div:before{content:"";position:absolute;top:0;left:0;width:15px;height:15px;border-radius:50%;background:var(--vi);box-shadow:0 0 16px var(--vi)}
+.rl .now:before{background:var(--ac);box-shadow:0 0 18px var(--ac);animation:pl 1.8s ease-in-out infinite}
+@keyframes pl{50%{transform:scale(1.5)}}
+@media(max-width:700px){.rl{grid-template-columns:1fr}.rl:before{display:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.rl .now:before{animation:none}}
+footer{padding:36px 5vw 44px;color:var(--mu);font-size:13px;text-align:center;border-top:1px solid var(--bd)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<nav><b>Optimum</b><a href="#problem">Vấn đề</a><a href="#rlnc">RLNC</a><a href="#mump2p">mump2p</a><a href="#eco">Kinh tế</a><a href="#roadmap">Roadmap</a></nav>
+<main>
+<div class="sc hero"><canvas id="hero"></canvas>
+<div class="tx"><h1>Data movement sets the ceiling. Optimum raises it.</h1><p>Universal Data Acceleration Network: dùng RLNC để tăng tốc lan truyền dữ liệu trên blockchain.</p></div></div>
+
+<div class="sc" id="problem"><canvas id="prob"></canvas>
+<div class="tx"><h2>Cùng một block, gửi đi gửi lại</h2><p>Gossipsub / libp2p: mỗi node chuyển tiếp cho nhiều hàng xóm nên nhận trùng lặp, tốn băng thông và thêm độ trễ.</p></div>
+<div class="hud">Gói trùng lặp (đỏ) / tổng lượt gửi<strong id="dup">0 / 0</strong></div></div>
+
+<div class="sc" id="rlnc"><canvas id="rl"></canvas>
+<div class="tx"><h2>RLNC: gửi phương trình, không gửi mảnh</h2><p>Mỗi packet là tổ hợp ngẫu nhiên của các mảnh. Nhận đủ 4 packet độc lập từ bất kỳ nguồn nào là tái tạo được dữ liệu; mất gói chỉ cần nhận thêm gói khác.</p></div>
+<div class="hud">Rank (packet độc lập đã nhận)<strong id="rank">0 / 4</strong><span id="eq">Đang tự chạy. Thử gửi hoặc làm mất gói.</span></div>
+<div class="ctl"><button id="bs">Gửi packet</button><button id="bd">Mất gói</button></div></div>
+
+<div class="sc" id="mump2p"><canvas id="gw"></canvas>
+<div class="tx"><h2>mump2p chạy song song, không thay consensus</h2><p>Gateway là sidecar cạnh client Ethereum. Hai đường chạy cùng lúc; dữ liệu nào đến đủ trước thì dùng.</p></div>
+<div class="lb" style="left:12%;top:56%;color:var(--vi)">Client<br><span style="font-weight:400;color:var(--mu)">Prysm, Lighthouse…</span></div>
+<div class="lb" style="right:5vw;top:24%;color:var(--rd)">Gossipsub · <b id="tg">0 ms</b></div>
+<div class="lb" style="right:5vw;top:66%;color:var(--ac)">Gateway · mump2p · <b id="tm">0 ms</b></div>
+<div class="hud"><strong>~150 ms vs ~1000 ms</strong>Hoodi testnet, nhanh hơn tối thiểu 6 lần (Optimum công bố)</div>
+<div class="bw"><div class="dots" id="b1"></div><div class="dots" id="b2"></div>băng thông giảm 90–95%</div></div>
+
+<div class="sc" id="eco"><canvas id="eco3"></canvas>
+<div class="tx"><h2>Độ trễ thấp có giá trị kinh tế</h2><p>Dữ liệu chảy vào (cyan), phí chảy ra (vàng).</p></div>
+<div class="chips"><div><b>Validator</b>Ít miss attestation/proposal: thêm reward và MEV.</div><div><b>Trading, AI agent, game</b>Ứng dụng nhạy độ trễ chạy onchain tốt hơn.</div><div><b>Flexnodes · Latency Marketplace (roadmap)</b>Bên cần tốc độ trả phí cho node cung cấp băng thông / equations.</div></div></div>
+</main>
+
+<section class="rm" id="roadmap"><h2>Roadmap</h2>
+<div class="rl"><div class="now"><b>Hiện tại</b>mump2p cho Ethereum validators</div><div><b>Tiếp theo</b>DeRAM (decentralized memory layer), nhiều chain</div><div><b>Hướng tới</b>Sản phẩm cho trader, Flexnodes, Latency Marketplace</div></div></section>
+
+<footer>Trang giải thích phi chính thức. Số liệu hiệu năng lấy theo thông tin Optimum công bố; các hình 3D chỉ mang tính minh họa khái niệm, không chính xác về tỷ lệ.<br>Nguồn số liệu: getoptimum.xyz và docs.getoptimum.xyz. Flexnodes và Latency Marketplace là roadmap, xem tài liệu chính thức của Optimum để cập nhật mới nhất.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),V=THREE.Vector3,CY=0x4de3ff,VI=0xb28cff,RD=0xff5d73,GY=0x8a93b8,AM=0xffc857;
+const tex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#fff');g.addColorStop(.25,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
+const AD=THREE.AdditiveBlending;
+const glow=(r,col,o=1)=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:col,transparent:true,opacity:o,blending:AD,depthWrite:false}));s.scale.set(r*5,r*5,1);return s};
+const seg=(pts,col,op)=>new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op,blending:AD,depthWrite:false}));
+const lines=(P,E,col,op)=>seg(E.flatMap(([a,b])=>[P[a],P[b]]),col,op);
+const fib=(n,R)=>[...Array(n)].map((_,i)=>{const y=1-2*(i+.5)/n,r=Math.sqrt(1-y*y),a=i*2.4;return new V(Math.cos(a)*r*R,y*R,Math.sin(a)*r*R)});
+function knn(P,k){const E=[],seen=new Set();P.forEach((p,i)=>P.map((q,j)=>[j,p.distanceTo(q)]).filter(x=>x[0]!=i).sort((a,b)=>a[1]-b[1]).slice(0,k).forEach(([j])=>{const key=Math.min(i,j)+'-'+Math.max(i,j);if(!seen.has(key)){seen.add(key);E.push([i,j])}}));return E}
+const adjOf=(n,E)=>{const a=[...Array(n)].map(()=>[]);E.forEach(([x,y])=>{a[x].push(y);a[y].push(x)});return a};
+function mk(id,build){const el=$(id),r=new THREE.WebGLRenderer({canvas:el,antialias:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));
+const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(50,1,.1,200);c.position.set(0,0,12);let vis=false,last=0;
+new IntersectionObserver(e=>vis=e[0].isIntersecting).observe(el);
+const tick=build(s,c),bz=c.position.z;
+const fit=()=>{const w=el.clientWidth,h=el.clientHeight;if(!w||!h)return;r.setSize(w,h,false);c.aspect=w/h;c.position.z=bz*Math.max(1,1.6/c.aspect);c.updateProjectionMatrix()};
+new ResizeObserver(fit).observe(el);fit();
+const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+(function loop(){requestAnimationFrame(loop);if(!vis)return;const t=performance.now()/1000,dt=Math.min(.05,t-last||.016);last=t;tick(rm?t*.3:t,rm?dt*.3:dt);r.render(s,c)})()}
+
+// Nền sao
+mk('bg',(s,c)=>{c.position.set(0,0,0);c.fov=65;
+const pts=(n,sz,col)=>{const a=new Float32Array(n*3);for(let i=0;i<n*3;i+=3){const r=30+Math.random()*60,u=Math.random()*2-1,th=Math.random()*6.283,q=Math.sqrt(1-u*u);a[i]=r*q*Math.cos(th);a[i+1]=r*u;a[i+2]=r*q*Math.sin(th)}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(a,3));return new THREE.Points(g,new THREE.PointsMaterial({size:sz,color:col,map:tex,transparent:true,blending:AD,depthWrite:false}))};
+const A=pts(900,.35,0xaec2ff),B=pts(160,.8,0xffffff);s.add(A,B);
+return t=>{A.rotation.y=B.rotation.y=t*.008+scrollY*.0004;A.rotation.x=B.rotation.x=scrollY*.0002}});
+
+// Hero: mạng node
+mk('hero',(s,c)=>{const g=new THREE.Group();s.add(g);g.position.x=innerWidth>900?4.5:0;const P=fib(48,5),E=knn(P,3),adj=adjOf(48,E);
+P.forEach((p,i)=>{const m=glow(.14,i%5?CY:VI);m.position.copy(p);g.add(m)});g.add(lines(P,E,0x7c8cff,.3));
+const ps=[...Array(36)].map(()=>{const m=glow(.2,0xffffff);g.add(m);const a=Math.random()*48|0;return{m,a,b:adj[a][Math.random()*adj[a].length|0],t:Math.random()}});
+let mx=0,my=0;addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+return(t,dt)=>{g.rotation.y=t*.12+mx*.8;g.rotation.x=my*.5;ps.forEach(p=>{p.t+=dt*.8;if(p.t>=1){p.t=0;const n=adj[p.b].filter(x=>x!=p.a);p.a=p.b;p.b=n.length?n[Math.random()*n.length|0]:adj[p.a][0]}p.m.position.lerpVectors(P[p.a],P[p.b],p.t)})}});
+
+// Vấn đề: gossip flooding
+mk('prob',(s,c)=>{c.position.set(0,1,11);const g=new THREE.Group();s.add(g);g.position.x=innerWidth>900?3:0;const P=fib(16,3.8),E=knn(P,4),adj=adjOf(16,E);
+const nodes=P.map((p,i)=>{const m=glow(i?.2:.45,i?GY:CY);m.position.copy(p);g.add(m);return m});g.add(lines(P,E,0x7c8cff,.25));
+let cl,ps=[],dup,tot,rest;
+const send=(i,from)=>adj[i].forEach(j=>{if(j==from)return;const d=cl[j];cl[j]=true;const m=glow(.13,d?RD:CY);g.add(m);ps.push({m,a:i,b:j,t:0,d});tot++;if(d)dup++});
+const reset=()=>{cl=P.map(()=>false);cl[0]=true;ps=[];dup=0;tot=0;rest=0;nodes.forEach((m,i)=>m.material.color.setHex(i?GY:CY));send(0,-1)};reset();
+return(t,dt)=>{g.rotation.y=t*.15;ps=ps.filter(p=>{p.t+=dt/1.1;if(p.t<1){p.m.position.lerpVectors(P[p.a],P[p.b],p.t);return true}g.remove(p.m);if(!p.d){nodes[p.b].material.color.setHex(CY);send(p.b,p.a)}return false});
+$('dup').textContent=dup+' / '+tot;if(!ps.length&&(rest+=dt)>2.5)reset()}});
+
+// RLNC: tự chạy, có thể can thiệp
+const SC=[0xff7ab8,0x6aa8ff,0xffd34d,0x4dffb0],NM='ABCD',EQ0='Đang tự chạy. Thử gửi hoặc làm mất gói.';
+let rlSend;
+mk('rl',(s,c)=>{c.position.set(0,1,13);const dst=[];
+SC.forEach((col,i)=>{const y=(1.5-i)*1.6,a=glow(.5,col);a.position.set(-6,y,0);s.add(a);const d=glow(.5,col,.15);d.position.set(6,y,0);s.add(d);dst.push(d)});
+for(let i=0;i<16;i++){const m=glow(.12,GY,.5);m.position.set((Math.random()-.5)*8,(Math.random()-.5)*5,(Math.random()-.5)*3);s.add(m)}
+let rank=0,pk=[],idle=0,cel=0;const upd=()=>$('rank').textContent=rank+' / 4';
+rlSend=drop=>{idle=0;if(rank>=4||pk.length>4)return;const cf=SC.map(()=>Math.random()*9+1|0),sum=cf.reduce((a,b)=>a+b),col=new THREE.Color(0,0,0);
+SC.forEach((h,i)=>{const k=new THREE.Color(h);col.r+=k.r*cf[i]/sum;col.g+=k.g*cf[i]/sum;col.b+=k.b*cf[i]/sum});
+const m=glow(.5,0xffffff);m.material.color.copy(col);s.add(m);pk.push({m,t:0,drop,amp:(Math.random()-.5)*4});
+$('eq').textContent='Packet = '+cf.map((x,i)=>x+'·'+NM[i]).join(' + ')};
+return(t,dt)=>{idle+=dt;if(rank<4&&idle>1.3)rlSend(Math.random()<.3);
+if(rank>=4&&(cel+=dt)>2.6){rank=0;cel=0;upd();$('eq').textContent=EQ0}
+pk=pk.filter(p=>{p.t+=dt/1.6;p.m.position.set(-4+p.t*8,Math.sin(p.t*Math.PI)*p.amp,0);
+if(p.drop&&p.t>.5){p.m.material.color.setHex(RD);p.m.scale.setScalar(Math.max(.01,2.5*(1-(p.t-.5)*5)));if(p.t>.7){s.remove(p.m);$('eq').textContent='Mất gói: không sao, chỉ cần thêm một packet bất kỳ.';return false}}
+if(p.t>=1){s.remove(p.m);if(rank<4){rank++;upd();if(rank>=4)$('eq').textContent='Đủ 4 packet độc lập: tái tạo dữ liệu gốc.'}return false}return true});
+dst.forEach((d,i)=>{const tg=rank>=4?1:.15+(i<rank?.7:0);d.material.opacity+=(tg-d.material.opacity)*.1;d.scale.setScalar(2.5*(rank>=4?1+.15*Math.sin(t*5):1))})}});
+$('bs').onclick=()=>rlSend(false);$('bd').onclick=()=>rlSend(true);
+
+// Gateway vs Gossipsub
+mk('gw',(s,c)=>{c.position.set(0,1,15);const X=[-7,-3,1,5],C=new V(-7,0,0),rows=[];
+const cl=glow(.9,VI);cl.position.copy(C);s.add(cl);
+const row=(y,fast)=>{const L=X.map((x,k)=>k?[0,1,2].map(i=>new V(x,y+(1-i)*.9,0)):[C]),nodes=[],ed=[];
+L.forEach((l,k)=>k&&l.forEach(p=>{const m=glow(.22,GY);m.position.copy(p);s.add(m);nodes.push({m,k})}));
+for(let k=0;k<3;k++)L[k].forEach((a,i)=>L[k+1].forEach((b,j)=>{if(fast&&k>0&&i!=j)return;ed.push({a,b,k,d:!fast&&k>0&&i!=j})}));
+s.add(seg(ed.flatMap(e=>[e.a,e.b]),fast?CY:RD,fast?.3:.18));
+ed.forEach(e=>{e.m=glow(.14,e.d?RD:CY);s.add(e.m)});rows.push({nodes,ed,hop:fast?.3:2})};
+row(2.6,false);row(-2.6,true);const CYC=7.5;
+return t=>{const tc=t%CYC;rows.forEach(r=>{r.ed.forEach(e=>{const l=(tc-e.k*r.hop)/r.hop;e.m.visible=l>=0&&l<=1;if(e.m.visible)e.m.position.lerpVectors(e.a,e.b,l)});
+r.nodes.forEach(n=>n.m.material.color.setHex(tc>=n.k*r.hop?CY:GY))});
+$('tg').textContent=Math.round(Math.min(1000,tc/6*1000))+' ms';$('tm').textContent=Math.round(Math.min(150,tc/.9*150))+' ms'}});
+const dots=(on,cl)=>[...Array(20)].map((_,i)=>`<i class="${i<on?cl:'off'}"></i>`).join('');$('b1').innerHTML=dots(20,'r');$('b2').innerHTML=dots(2,'c');
+
+// Kinh tế: Flexnodes
+mk('eco3',(s,c)=>{c.position.set(0,1,13);const g=new THREE.Group();g.rotation.x=1;g.position.x=innerWidth>900?3:0;s.add(g);const N=14,P=[...Array(N)].map((_,i)=>new V(Math.cos(i/N*6.283)*5,Math.sin(i/N*6.283)*5,0));
+g.add(glow(.8,AM));P.forEach(p=>{const m=glow(.25,CY);m.position.copy(p);g.add(m)});g.add(lines(P.concat(new V()),P.map((_,i)=>[i,N]),0x6f86ff,.22));
+const ps=[...Array(N*2)].map((_,i)=>{const m=glow(.12,i%2?AM:CY);g.add(m);return{m,i:i>>1,t:Math.random(),out:i%2}});
+return(t,dt)=>{g.rotation.z=t*.1;ps.forEach(p=>{p.t=(p.t+dt*(p.out?.25:.5))%1;p.m.position.copy(P[p.i]).multiplyScalar(p.out?p.t:1-p.t)})}});
+</script>
+</body>
+</html>

@@ -39,17 +39,49 @@ window.OPT = window.OPT || {};
   const solid = (geo, col, op = .15) => new THREE.Mesh(geo,
     new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide }));
 
-  /** Nhãn chữ dạng sprite. Trả về sprite có hàm .set(text) để đổi chữ. */
+  /* ---------- Đa ngôn ngữ cho nhãn 3D ----------
+   * Nhãn vẽ bằng canvas nên i18n.js (duyệt DOM) không thấy. Mỗi nhãn nhớ chuỗi tiếng Việt gốc
+   * (s.src) và vẽ lại bằng OPT_I18N.t(...) mỗi khi bản dịch về (sự kiện 'opt-i18n') hoặc font tải xong. */
+  const I18 = () => window.OPT_I18N;
+  const T = s => { const i = I18(); return i && i.t ? i.t(s) : s; };
+  const seen = new Set(); let queue = [], qt = 0;
+  const need = s => {                                  // xếp chuỗi vào hàng đợi dịch (gộp thành 1 lượt)
+    const i = I18(); if (!i || !i.load || i.isSource() || !s) return;
+    const k = s.replace(/\d+/g, '0'); if (seen.has(k)) return; seen.add(k);
+    queue.push(s); clearTimeout(qt);
+    qt = setTimeout(() => { const l = queue; queue = []; i.load(l); }, 60);
+  };
+  const stack = () => {
+    const f = (getComputedStyle(document.documentElement).getPropertyValue('--i18n-font') || '').replace(/,\s*system-ui,sans-serif\s*$/, '').trim();
+    return (f ? f + ',' : '') + "'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',sans-serif";
+  };
+  const REG = [];
+  const reg = sp => REG.push(window.WeakRef ? new WeakRef(sp) : { deref: () => sp });
+  const redrawAll = () => { for (let i = REG.length - 1; i >= 0; i--) { const sp = REG[i].deref(); if (sp) sp.redraw(); else REG.splice(i, 1); } };
+  addEventListener('opt-i18n', () => {
+    const i = I18(), f = i && i.font && i.font().split(',')[0].replace(/['"]/g, '').trim();
+    if (f && document.fonts && document.fonts.load) document.fonts.load("600 30px '" + f + "'", 'Aあ가한').then(redrawAll, () => {});
+    redrawAll();
+  });
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', redrawAll);
+
+  /** Nhãn chữ dạng sprite. Trả về sprite có hàm .set(text) để đổi chữ (text luôn là tiếng Việt gốc). */
   function label(text, { color = '#eaf0ff', size = 1.1, px = 30, w = 320, h = 72, weight = 600 } = {}) {
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const x = cv.getContext('2d'), t = new THREE.CanvasTexture(cv);
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }));
     s.scale.set(size * w / h, size, 1); s.renderOrder = 10;
-    s.set = (txt, col) => {
-      x.clearRect(0, 0, w, h); x.font = `${weight} ${px}px 'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',sans-serif`;
+    let src = '', col;
+    const draw = () => {
+      const txt = T(src), fam = stack(); let p = px;
+      x.clearRect(0, 0, w, h);
+      x.font = `${weight} ${p}px ${fam}`;
+      while (p > 11 && x.measureText(txt).width > w - 12) { p--; x.font = `${weight} ${p}px ${fam}`; }  // bản dịch dài → thu nhỏ chữ cho vừa nhãn
       x.textAlign = 'center'; x.textBaseline = 'middle';
       x.shadowColor = 'rgba(0,0,0,.85)'; x.shadowBlur = 8; x.fillStyle = col || color; x.fillText(txt, w / 2, h / 2); t.needsUpdate = true;
     };
+    s.set = (txt, c) => { src = txt; col = c; need(txt); draw(); };
+    s.redraw = draw; reg(s);
     s.set(text); return s;
   }
 
@@ -59,5 +91,5 @@ window.OPT = window.OPT || {};
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  O.kit = { V, C, AD, tex, glow, seg, lines, fib, knn, adjOf, wire, solid, label, hexCss, $, setText, ease, clamp };
+  O.kit = { V, C, AD, tex, glow, seg, lines, fib, knn, adjOf, wire, solid, label, T, hexCss, $, setText, ease, clamp };
 })(window.OPT);

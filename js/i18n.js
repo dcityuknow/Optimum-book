@@ -73,9 +73,15 @@
     return null;
   }
 
+  var cacheFor = null;
   function loadCache(g) {
     try { cache = JSON.parse(localStorage.getItem(CACHE_PREFIX + g) || '{}'); } catch (e) { cache = {}; }
     for (var k in cache) outs.add(cache[k]);
+  }
+  function ensureCache() {            // nạp cache đúng ngôn ngữ đích (một lần cho mỗi ngôn ngữ)
+    if (cacheFor === target.g) return;
+    cacheFor = target.g;
+    loadCache(target.g);
   }
   var saveTimer;
   function saveCache(g) {
@@ -218,7 +224,7 @@
   }
 
   function start() {
-    loadCache(target.g);
+    ensureCache();
     var items = [];
     collect(document.body, items);
     run(items);
@@ -235,6 +241,7 @@
       subtree: true, childList: true, characterData: true,
       attributes: true, attributeFilter: ATTRS
     });
+    fire();                            // báo cho mô hình 3D / SVG: ngôn ngữ đã chọn xong
   }
 
   /* ---------- font theo hệ chữ ---------- */
@@ -417,6 +424,61 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
+  /* ---------- API cho mô hình 3D (canvas) và hình SVG ----------
+   * Hai thứ này không phải chữ trong DOM nên bộ duyệt DOM ở trên không dịch được.
+   * Chúng dùng chung cache + Google Dịch ở trên qua:
+   *   OPT_I18N.t(str)        → bản dịch đã có (đồng bộ); chưa có thì trả nguyên chuỗi gốc
+   *   OPT_I18N.load([str…])  → Promise: dịch các chuỗi còn thiếu rồi bắn sự kiện 'opt-i18n'
+   *   OPT_I18N.wants(str)    → chuỗi này có cần dịch không (tiếng Việt, hoặc thuật ngữ trong ALSO)
+   */
+  var VIET = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+  var KEEP = { 'Muriel Médard': 1, 'Médard': 1 };               // tên riêng: không dịch
+  var ALSO = {};                                                 // chữ Anh thông dụng cũng cần dịch (thêm/bớt tuỳ ý)
+  ['execution', 'consensus', 'client', 'sidecar', 'validator', 'latency', 'marketplace', 'introduction',
+   'research', 'waitlist', 'block', 'forward', 'roadmap', 'data layer', 'chain-agnostic', 'quick start',
+   'theo docs', 'trading · ai agent', 'game · dapp', 'validator eth', 'length prefix + pad', 'encode · decode',
+   'publish'].forEach(function (w) { ALSO[w] = 1; });
+
+  function wants(s) {
+    var c = norm(String(s == null ? '' : s));
+    if (!c || KEEP[c] || !hasWords(c)) return false;
+    return VIET.test(c) || ALSO[c.toLowerCase()] === 1;
+  }
+  function fire() { try { window.dispatchEvent(new CustomEvent('opt-i18n')); } catch (e) {} }
+
+  function tSync(s) {
+    if (target.g === SRC || !wants(s)) return s;
+    ensureCache();
+    var c = norm(s), tr = cache[key(c)];
+    if (tr === undefined) return s;
+    tr = fill(tr, c);
+    if (tr === null) return s;
+    var m = String(s).match(/^(\s*)[\s\S]*?(\s*)$/);
+    return m[1] + tr + m[2];
+  }
+
+  function loadList(list) {
+    if (target.g === SRC) return Promise.resolve();
+    ensureCache();
+    var miss = {};
+    list.forEach(function (s) {
+      if (!wants(s)) return;
+      var k = key(norm(s));
+      if (cache[k] === undefined) miss[k] = 1;
+    });
+    var ks = Object.keys(miss);
+    if (!ks.length) return Promise.resolve();
+    setBusy(1);
+    var done = function () { setBusy(-1); fire(); };
+    return translateList(ks, target.g).then(done, done);
+  }
+
   // cho phép code khác gọi: OPT_I18N.lang()
-  window.OPT_I18N = { lang: function () { return target.c; }, langs: LANGS };
+  window.OPT_I18N = {
+    lang: function () { return target.c; },
+    langs: LANGS,
+    isSource: function () { return target.g === SRC; },
+    font: function () { var f = FONTS[target.g]; return f ? f.fam : ''; },
+    wants: wants, t: tSync, load: loadList
+  };
 })();

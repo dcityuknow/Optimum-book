@@ -84,10 +84,24 @@
   }
 
   /* ---- Hologram ---- */
+  // Slot `.hv` (logo trên bìa): chỉ bật khi rê chuột vào (máy cảm ứng không có hover nên tự bật như các trang khác)
+  const coarse = matchMedia('(hover:none)').matches; let hv = false;
   function slotsNow() {
     const r = L[S], l = !mob && S > 0 ? L[S - 1] : null;
-    return [r && r.fs, l && l.bs].filter(Boolean);
+    return [r && r.fs, l && l.bs].filter(Boolean).filter(x => !x.classList.contains('hv') || hv || coarse);
   }
+  const coverSlot = () => { const x = L[0] && L[0].fs; return x && x.classList.contains('hv') ? x : null; };
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    const x = coverSlot(); let now = false;
+    if (x && S === 0 && !drag && !vw) {
+      const r = x.getBoundingClientRect(), mx = r.width * .04, my = r.height * .04;
+      now = e.clientX > r.left - mx && e.clientX < r.right + mx && e.clientY > r.top - my && e.clientY < r.bottom + my;
+    }
+    if (now === hv) return; hv = now;
+    if (now) { clearTimeout(sT); sT = setTimeout(raise, 90); } else drop();
+  });
+  document.addEventListener('mouseleave', () => { if (hv) { hv = false; drop(); } });
   function settle() { clearTimeout(sT); sT = setTimeout(raise, 250); }
   function raise() { if (drag || vw || raf || L.some(l => l.tw) || O.Holo.isUp) return; O.Holo.raise(slotsNow()); }
   const drop = () => { clearTimeout(sT); O.Holo.drop(); };

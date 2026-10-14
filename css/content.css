@@ -7,15 +7,29 @@ code{font:500 .85em ui-monospace,Menlo,Consolas,monospace;color:var(--ac);backgr
 .pg p a,.ls a{color:var(--ac);text-decoration:none;word-break:break-word}.pg p a:hover,.ls a:hover{text-decoration:underline}
 .src{font-size:.85em;color:var(--mu)}
 
-/* Bìa */
-.cv{justify-content:flex-end;padding:2.6em 2.4em;background:linear-gradient(160deg,#1b2160,#080b22)}
-.cv .art{position:absolute;left:0;right:0;top:0;width:100%;height:56%;object-fit:cover;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
-.cv .br{position:absolute;top:1.6em;left:1.9em;font:600 1.3em var(--sf);color:var(--ac);z-index:1}
-.cv h1{position:relative;font:600 2.4em/1.08 var(--sf);letter-spacing:-.02em;margin:0 0 .5em}
-.cv p{position:relative;color:var(--tx);opacity:.8;font-size:1em}
-.cv small{position:relative;color:var(--mu);font-size:.8em}
+/* Bìa: nền đen xanh, lưới cyan mờ, chữ OPTIMUM chrome, logo 3D (poster) ở giữa */
+.cv{justify-content:flex-start;align-items:center;text-align:center;padding:2.2em 1.6em 1.4em;background:radial-gradient(120% 70% at 50% 62%,#0f2230 0,#070b16 55%,#03050b 100%)}
+.cv-bg{position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+   linear-gradient(90deg,transparent 0,#4de3ff0d 50%,transparent 100%) 0 47%/100% 1px no-repeat,
+   linear-gradient(90deg,transparent 0,#4de3ff14 50%,transparent 100%) 0 58%/100% 1px no-repeat,
+   linear-gradient(90deg,transparent 0,#4de3ff0a 50%,transparent 100%) 0 70%/100% 1px no-repeat,
+   repeating-linear-gradient(90deg,#4de3ff0f 0 1px,transparent 1px 26px) 0 40%/100% 38% no-repeat,
+   repeating-linear-gradient(0deg,#4de3ff0b 0 1px,transparent 1px 26px) 0 40%/100% 38% no-repeat;
+  -webkit-mask-image:radial-gradient(70% 50% at 50% 58%,#000,transparent);mask-image:radial-gradient(70% 50% at 50% 58%,#000,transparent)}
+.cv-title{position:relative;z-index:1;margin:.25em 0 .1em;font:800 4.55em/1 'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.015em;white-space:nowrap;
+  background:linear-gradient(180deg,#fff 0,#e9ecf2 22%,#a9afbc 46%,#6f7686 52%,#d6dae3 70%,#f6f7fa 86%,#9aa1b0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  filter:drop-shadow(0 1px 0 #fff6) drop-shadow(0 3px 2px #0009) drop-shadow(0 0 14px #4de3ff22)}
+.cv-title.sm{font-size:2.6em}
+.cv p.cv-sub{position:relative;z-index:1;margin:.15em 0 0;color:#eef2fa;opacity:.95;font:500 1.12em/1.3 'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.005em}
+.cv .cvlogo{position:absolute;z-index:1;left:2%;right:auto;width:96%;height:auto;top:54%;transform:translateY(-50%);margin:0;flex:none;aspect-ratio:1/1;border:0;border-radius:0;background:none;overflow:visible}
+.cv .cvlogo:before{display:none}
+.cv .cvlogo img{transition:opacity .35s}
+.cv .cvlogo.on img{opacity:0}
+.cv-hint{position:absolute;z-index:1;left:0;right:0;bottom:1.2em;padding:0 1.6em;color:var(--mu);font-size:.72em;line-height:1.4;opacity:.8}
+.h-touch{display:none}@media(hover:none){.h-mouse{display:none}.h-touch{display:inline}}
 .bc{justify-content:center;align-items:center;text-align:center}
-.bc b{font:600 2em var(--sf);color:var(--ac)}.bc p{max-width:16em}
+.bc p{max-width:16em;position:relative;z-index:1;color:#d7deee}
 
 /* Hình minh hoạ SVG */
 .fig{position:relative;flex:none;margin:0 0 1.3em;border-radius:12px;overflow:hidden;border:1px solid var(--bd);background:#0a0f2a;aspect-ratio:5/3;box-shadow:0 8px 24px #0006}

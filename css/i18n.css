@@ -3,7 +3,7 @@
 #i18n {
   position: fixed;
   top: max(12px, env(safe-area-inset-top, 0px));
-  right: max(12px, env(safe-area-inset-right, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
   z-index: 9999;
   font: 500 14px/1.2 'Be Vietnam Pro', 'Noto Sans', system-ui, sans-serif;
   color: #e6edf6;
@@ -33,7 +33,7 @@
 #i18n-list {
   position: absolute;
   top: 44px;
-  right: 0;
+  left: 0;
   width: 224px;
   max-height: min(70vh, 460px);
   margin: 0;

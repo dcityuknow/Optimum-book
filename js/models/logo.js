@@ -31,27 +31,24 @@
     const t = new THREE.CubeTexture(faces); t.needsUpdate = true; return t;
   }
 
-  /** Vòng số 8: ống tiết diện siêu-elip quét dọc đường Cassini (hai thùy, thắt ở giữa). */
+  /** Đường viền trong/ngoài của logo, đo trực tiếp từ ảnh logo gốc (90 mẫu theo góc, chiều rộng ngoài = 1). */
+  const PROF_IN = [0.36858, 0.36904, 0.36776, 0.36488, 0.36009, 0.35245, 0.34108, 0.32623, 0.30926, 0.2915, 0.2728, 0.25158, 0.22648, 0.19849, 0.1713, 0.14941, 0.13524, 0.12784, 0.12404, 0.12093, 0.11766, 0.11502, 0.1139, 0.11408, 0.11463, 0.11522, 0.11688, 0.12151, 0.13063, 0.14451, 0.16229, 0.18269, 0.20452, 0.22681, 0.24864, 0.26926, 0.28831, 0.30571, 0.3214, 0.33498, 0.34589, 0.35396, 0.35967, 0.36383, 0.36691, 0.36861, 0.36822, 0.3653, 0.36007, 0.35304, 0.34448, 0.33416, 0.32181, 0.30757, 0.29192, 0.27506, 0.2565, 0.23543, 0.21184, 0.18728, 0.16462, 0.14661, 0.13443, 0.12725, 0.12304, 0.11993, 0.11716, 0.11511, 0.11452, 0.11568, 0.11814, 0.12117, 0.12461, 0.12956, 0.13824, 0.1528, 0.1738, 0.19941, 0.22607, 0.25035, 0.27067, 0.28766, 0.30299, 0.31766, 0.33131, 0.34285, 0.35164, 0.35801, 0.36278, 0.36637];
+  const PROF_OUT = [0.49776, 0.49729, 0.49493, 0.49063, 0.48421, 0.47562, 0.46501, 0.4526, 0.43854, 0.42281, 0.40538, 0.38641, 0.36625, 0.34519, 0.32317, 0.29998, 0.27595, 0.25251, 0.23205, 0.21678, 0.20749, 0.20317, 0.20196, 0.20274, 0.20602, 0.21347, 0.22634, 0.24432, 0.2655, 0.28757, 0.30904, 0.32964, 0.34974, 0.36952, 0.38874, 0.40693, 0.42382, 0.43939, 0.45361, 0.46627, 0.47708, 0.48591, 0.49286, 0.49806, 0.50145, 0.50277, 0.50178, 0.49847, 0.493, 0.48557, 0.47625, 0.46509, 0.45222, 0.43788, 0.42219, 0.40518, 0.38686, 0.36746, 0.34739, 0.3269, 0.30588, 0.28414, 0.26208, 0.24115, 0.22349, 0.21081, 0.20337, 0.19994, 0.19891, 0.19978, 0.20361, 0.21225, 0.2268, 0.24663, 0.26961, 0.29329, 0.31607, 0.3376, 0.3582, 0.37817, 0.39735, 0.41527, 0.43149, 0.44589, 0.45858, 0.46969, 0.47922, 0.48696, 0.49269, 0.49627];
+  const prof = (arr, th) => { const n = arr.length, f = ((th / (PI * 2)) % 1 + 1) % 1 * n, i = Math.floor(f), t = f - i; return arr[i % n] * (1 - t) + arr[(i + 1) % n] * t; };
+
+  /** Vòng số 8: mỗi hướng θ có điểm trong/ngoài từ ảnh gốc; tiết diện là siêu-elip nối hai điểm đó. */
   function ringGeometry() {
-    const NU = 260, NV = 56, a2 = 1.21, ys = 1.12, Wc = 7.7;
-    const base = [];
-    for (let i = 0; i < NU; i++) {
-      const th = i / NU * PI * 2, s2 = Math.sin(2 * th);
-      const r = Math.sqrt(Math.cos(2 * th) + Math.sqrt(a2 * a2 - s2 * s2));
-      base.push([r * Math.cos(th), r * Math.sin(th) * ys]);
-    }
-    const xmax = Math.max(...base.map(p => Math.abs(p[0]))), k = Wc / 2 / xmax;
-    const pts = base.map(p => [p[0] * k, p[1] * k]);
+    const NU = 360, NV = 64, W = 9.0, DEPTH = .78, EXP = 3.2;
     const pos = [], idx = [], cen = [];
+    // độ dày (chiều sâu) lấy trung bình trượt để bề mặt mượt, không gồ ở chỗ thắt
+    const hws = [...Array(NU)].map((_, i) => { const th = i / NU * PI * 2; return (prof(PROF_OUT, th) - prof(PROF_IN, th)) * W / 2; });
+    const dsm = i => { let a = 0; for (let k = -24; k <= 24; k++) a += hws[(i + k + NU) % NU]; return a / 49; };
     for (let i = 0; i < NU; i++) {
-      const a = pts[(i + NU - 1) % NU], b = pts[(i + 1) % NU];
-      let tx = b[0] - a[0], ty = b[1] - a[1]; const l = Math.hypot(tx, ty); tx /= l; ty /= l;
-      const nx = -ty, ny = tx, xn = pts[i][0] / (Wc / 2);
-      const wf = Math.exp(-Math.pow(xn / .3, 2));
-      const rho = .66 * (1 - .15 * wf), dep = rho * .9;
+      const th = i / NU * PI * 2, ri = prof(PROF_IN, th) * W, ro = prof(PROF_OUT, th) * W;
+      const dx = Math.cos(th), dy = Math.sin(th), mid = (ri + ro) / 2, hw = (ro - ri) / 2, dep = dsm(i) * DEPTH;
       for (let j = 0; j < NV; j++) {
-        const ph = j / NV * PI * 2, cx = sgnPow(Math.cos(ph), 2 / 2.4), cy = sgnPow(Math.sin(ph), 2 / 2.4);
-        pos.push(pts[i][0] + nx * rho * cx, pts[i][1] + ny * rho * cx, dep * cy); cen.push(pts[i][0], pts[i][1], 0);
+        const ph = j / NV * PI * 2, cx = sgnPow(Math.cos(ph), 2 / EXP), cy = sgnPow(Math.sin(ph), 2 / EXP);
+        pos.push(dx * (mid + hw * cx), dy * (mid + hw * cx), dep * cy); cen.push(dx * mid, dy * mid, 0);
       }
     }
     for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
@@ -60,7 +57,6 @@
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-    // Đảo chiều mặt nếu pháp tuyến đang hướng vào trong
     const n = g.attributes.normal.array; let d = 0;
     for (let q = 0; q < pos.length; q += 3) d += n[q] * (pos[q] - cen[q]) + n[q + 1] * (pos[q + 1] - cen[q + 1]) + n[q + 2] * pos[q + 2];
     if (d < 0) { for (let q = 0; q < idx.length; q += 3) { const t = idx[q + 1]; idx[q + 1] = idx[q + 2]; idx[q + 2] = t; } g.setIndex(idx); g.computeVertexNormals(); }
@@ -88,50 +84,20 @@
     g.computeVertexNormals(); return g;
   }
 
-  /** Tia lỏng: ống thon dần dọc đường cong, có "hạt" phồng và giọt ở đầu. */
-  function tendril(pts, r0, beads, seed, mat, tip = 1) {
-    const grp = new THREE.Group(), curve = new THREE.CatmullRomCurve3(pts), NU = 90, NV = 12;
-    const fr = curve.computeFrenetFrames(NU, false), pos = [], idx = [];
-    const rad = u => r0 * Math.pow(1 - u, .8) * (1 + .95 * Math.pow(Math.max(0, Math.sin(u * beads * PI + seed)), 5)) + r0 * .1;
-    for (let i = 0; i <= NU; i++) {
-      const u = i / NU, c = curve.getPointAt(u), r = rad(u);
-      for (let j = 0; j < NV; j++) {
-        const a = j / NV * PI * 2, cs = Math.cos(a) * r, sn = Math.sin(a) * r;
-        pos.push(c.x + fr.normals[i].x * cs + fr.binormals[i].x * sn, c.y + fr.normals[i].y * cs + fr.binormals[i].y * sn, c.z + fr.normals[i].z * cs + fr.binormals[i].z * sn);
-      }
-    }
-    for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
-      const j2 = (j + 1) % NV, A = i * NV + j, B = (i + 1) * NV + j, Cc = (i + 1) * NV + j2, D = i * NV + j2; idx.push(A, B, D, B, Cc, D);
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-    grp.add(new THREE.Mesh(g, mat));
-    { const r1 = new THREE.Mesh(new THREE.SphereGeometry(r0 * 1.05, 20, 14), mat); r1.position.copy(curve.getPointAt(0)); grp.add(r1); }
-    if (tip) { const d = new THREE.Mesh(new THREE.SphereGeometry(r0 * (.55 + .35 * tip), 24, 18), mat); d.position.copy(curve.getPointAt(1)); grp.add(d); }
-    return grp;
-  }
-
   O.registerModel('logo', (s, c) => {
     c.position.set(0, 0, 12);
     const env = makeEnv(), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: .24, envMap: env, envMapIntensity: 1.45, side: THREE.DoubleSide });
+    // Chất liệu như logo gốc: trắng xám satin, hơi mờ (không phải gương chrome)
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xdcdcdc, metalness: .03, roughness: .7, envMap: env, envMapIntensity: .15 });
+    s.add(new THREE.HemisphereLight(0xffffff, 0x555a66, .82));
+    const key = new THREE.DirectionalLight(0xffffff, .45); key.position.set(-1.5, 4, 9); s.add(key);
+    const rim = new THREE.DirectionalLight(0xbfe9ff, .25); rim.position.set(5, -3, -4); s.add(rim);
     const g = new THREE.Group(); s.add(g);
 
     // Quầng sáng rất nhẹ phía sau để hologram có chiều sâu (poster gần như không thấy)
-    const halo = glow(1.9, C.CY, .1); halo.position.z = -1.5; g.add(halo);
+    const halo = glow(1.9, C.CY, .06); halo.position.z = -1.5; g.add(halo);
 
     const ring = new THREE.Mesh(ringGeometry(), chrome); g.add(ring);
-
-    // --- Tia lỏng (nhóm phải-trên, nhóm trái-dưới) ---
-    [
-      [[P(296, 334, .1), P(338, 304, .2), P(386, 289), P(440, 283, -.1), P(506, 266, 0)], 10, 4, .3, 1],
-      [[P(300, 342, 0), P(358, 322, .2), P(428, 308), P(480, 299, .1)], 5.5, 3, .9, .8],
-      [[P(292, 330, .2), P(326, 292, .3), P(352, 268), P(372, 262, .2)], 6, 2, 0, 1],
-      [[P(318, 322), P(346, 306), P(372, 303)], 3.4, 1, .5, .6],
-      [[P(228, 479, .1), P(186, 495, .2), P(134, 501), P(84, 497, -.1), P(36, 489, 0)], 9, 4, .6, 1],
-      [[P(226, 484), P(192, 507, .2), P(160, 534), P(126, 556, .1)], 6, 3, 0, 1],
-      [[P(206, 482, .1), P(207, 512), P(197, 540), P(192, 562, .1)], 5.5, 2, .4, .9],
-      [[P(150, 490), P(112, 482), P(80, 470, .1), P(66, 467)], 3.4, 2, .2, .8]
-    ].forEach(([pts, r, b, sd, tp]) => g.add(tendril(pts, r * K, b, sd, chrome, tp)));
 
     // --- Giọt trôi quanh logo ---
     const drops = [];

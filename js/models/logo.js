@@ -35,6 +35,7 @@
   const PROF_IN = [0.36858, 0.36904, 0.36776, 0.36488, 0.36009, 0.35245, 0.34108, 0.32623, 0.30926, 0.2915, 0.2728, 0.25158, 0.22648, 0.19849, 0.1713, 0.14941, 0.13524, 0.12784, 0.12404, 0.12093, 0.11766, 0.11502, 0.1139, 0.11408, 0.11463, 0.11522, 0.11688, 0.12151, 0.13063, 0.14451, 0.16229, 0.18269, 0.20452, 0.22681, 0.24864, 0.26926, 0.28831, 0.30571, 0.3214, 0.33498, 0.34589, 0.35396, 0.35967, 0.36383, 0.36691, 0.36861, 0.36822, 0.3653, 0.36007, 0.35304, 0.34448, 0.33416, 0.32181, 0.30757, 0.29192, 0.27506, 0.2565, 0.23543, 0.21184, 0.18728, 0.16462, 0.14661, 0.13443, 0.12725, 0.12304, 0.11993, 0.11716, 0.11511, 0.11452, 0.11568, 0.11814, 0.12117, 0.12461, 0.12956, 0.13824, 0.1528, 0.1738, 0.19941, 0.22607, 0.25035, 0.27067, 0.28766, 0.30299, 0.31766, 0.33131, 0.34285, 0.35164, 0.35801, 0.36278, 0.36637];
   const PROF_OUT = [0.49776, 0.49729, 0.49493, 0.49063, 0.48421, 0.47562, 0.46501, 0.4526, 0.43854, 0.42281, 0.40538, 0.38641, 0.36625, 0.34519, 0.32317, 0.29998, 0.27595, 0.25251, 0.23205, 0.21678, 0.20749, 0.20317, 0.20196, 0.20274, 0.20602, 0.21347, 0.22634, 0.24432, 0.2655, 0.28757, 0.30904, 0.32964, 0.34974, 0.36952, 0.38874, 0.40693, 0.42382, 0.43939, 0.45361, 0.46627, 0.47708, 0.48591, 0.49286, 0.49806, 0.50145, 0.50277, 0.50178, 0.49847, 0.493, 0.48557, 0.47625, 0.46509, 0.45222, 0.43788, 0.42219, 0.40518, 0.38686, 0.36746, 0.34739, 0.3269, 0.30588, 0.28414, 0.26208, 0.24115, 0.22349, 0.21081, 0.20337, 0.19994, 0.19891, 0.19978, 0.20361, 0.21225, 0.2268, 0.24663, 0.26961, 0.29329, 0.31607, 0.3376, 0.3582, 0.37817, 0.39735, 0.41527, 0.43149, 0.44589, 0.45858, 0.46969, 0.47922, 0.48696, 0.49269, 0.49627];
   const prof = (arr, th) => { const n = arr.length, f = ((th / (PI * 2)) % 1 + 1) % 1 * n, i = Math.floor(f), t = f - i; return arr[i % n] * (1 - t) + arr[(i + 1) % n] * t; };
+  O.logoProfile = { IN: PROF_IN, OUT: PROF_OUT };      // xuất cho js/cursor.js dùng lại hình logo
 
   /** Vòng số 8: mỗi hướng θ có điểm trong/ngoài từ ảnh gốc; tiết diện là siêu-elip nối hai điểm đó. */
   function ringGeometry() {
@@ -187,34 +188,50 @@
     cluster(432, 243, .1, 4, 18, 0);                          // giọt 4 thùy
     cluster(397, 558, .1, 4, 20, 0);
 
-    const T = 7.5, T0 = 5.2, ISOK = K / .575;         // chu kỳ dính–tách (giây); lúc bắt đầu; px→bán kính ảnh hưởng
+    const T = 7.5, T0 = 5.2, ISOK = K / .575;                   // chu kỳ dính–tách (giây); lúc bắt đầu; px→bán kính ảnh hưởng
+    const BX = 6.3, BY = 5.6;                                   // giới hạn vùng đặt giọt
     let pk = -1, plan = [];
-    // Mỗi chu kỳ: chia các hạt thành nhóm 1/2/3/4 hạt (ngẫu nhiên có chủ đích, nhóm khác nhau mỗi lần),
-    // mỗi nhóm bay tới điểm gặp nhau và xếp thành: 2 = hàng đôi, 3 = tam giác, 4 = hình thoi/chữ thập.
+    // Mỗi chu kỳ: chia hạt thành nhóm 1/2/3/4. Để hình luôn "sạch":
+    //  1) trong nhóm, các bi được cân về CÙNG bán kính (nước chia đều) → không có bi bé bị nuốt/lòi gai;
+    //  2) các nhóm được đẩy giãn ra (relaxation) để không nhóm nào dính nhầm sang nhóm khác;
+    //  3) nhóm xếp thành hình chuẩn: 2 = viên thắt, 3 = tam giác, 4 = 4 thùy.
     function grouping(k) {
-      const n = DR.length, used = Array(n).fill(false), res = Array(n).fill(null);
+      const n = DR.length, used = Array(n).fill(false), res = Array(n).fill(null), Gs = [];
       const order = [...Array(n).keys()].sort((a, b) => hash(a * 7.3 + k * 13.1) - hash(b * 7.3 + k * 13.1));
       for (const a of order) {
         if (used[a]) continue; used[a] = true;
-        const r = hash(a * 1.9 + k * 9.1), want = r < .12 ? 1 : r < .45 ? 2 : r < .78 ? 3 : 4;
-        const cand = []; for (let b = 0; b < n; b++) if (!used[b]) { const d = DR[a].b.distanceTo(DR[b].b); if (d < 9) cand.push([b, d * (.3 + 1.4 * hash(a * 17 + b * 3 + k))]); }
+        const r = hash(a * 1.9 + k * 9.1), want = r < .1 ? 1 : r < .4 ? 2 : r < .72 ? 3 : 4;
+        const cand = []; for (let b = 0; b < n; b++) if (!used[b]) { const d = DR[a].b.distanceTo(DR[b].b); if (d < 5) cand.push([b, d * (.5 + hash(a * 17 + b * 3 + k))]); }
         cand.sort((p, q) => p[1] - q[1]);
         const mem = [a, ...cand.slice(0, want - 1).map(q => q[0])]; mem.forEach(m => used[m] = true);
-        const m = mem.length; if (m < 2) continue;
+        const m = mem.length; let rm = 0; mem.forEach(i => rm += DR[i].r); rm /= m;
         const C = new V(); mem.forEach(i => C.add(DR[i].b)); C.multiplyScalar(1 / m);
-        let rm = 0; mem.forEach(i => rm += DR[i].rp); rm /= m;
-        const rho = FR[m] * rm, a0 = hash(a + k * 3.3) * 2 * PI, sg = hash(a * 5 + k) < .5 ? -1 : 1;
-        const ang = i => Math.atan2(DR[i].b.y - C.y, DR[i].b.x - C.x);
-        mem.sort((p, q) => ang(p) - ang(q));
-        const slots = [...Array(m)].map((_, q) => [C.x + Math.cos(a0 + q * 2 * PI / m) * rho, C.y + Math.sin(a0 + q * 2 * PI / m) * rho]);
+        const rho = m > 1 ? FR[m] * rm * K : 0;
+        Gs.push({ mem, m, rm, rho, ext: rho + rm * K, x: C.x, y: C.y, fix: m === 1 });
+      }
+      for (let it = 0; it < 60; it++) for (let a = 0; a < Gs.length; a++) for (let b = a + 1; b < Gs.length; b++) {
+        const A = Gs[a], B = Gs[b]; if (A.fix && B.fix) continue;
+        const need = A.ext + B.ext + .75 * (A.rm + B.rm) / 2 * K + .35;
+        let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy); if (d >= need) continue;
+        if (d < 1e-4) { dx = 1; dy = 0; d = 1; } const o = need - d, wa = A.fix ? 0 : 1, wb = B.fix ? 0 : 1, ws = wa + wb;
+        A.x -= dx / d * o * wa / ws; A.y -= dy / d * o * wa / ws; B.x += dx / d * o * wb / ws; B.y += dy / d * o * wb / ws;
+        [A, B].forEach(g => { if (!g.fix) { g.x = clamp(g.x, -BX, BX); g.y = clamp(g.y, -BY, BY); } });
+      }
+      Gs.forEach((g, gi) => {
+        const m = g.m;
+        if (m < 2) { res[g.mem[0]] = { g: gi, solo: true }; return; }
+        const a0 = hash(gi * 3.1 + k * 3.3) * 2 * PI, sg = hash(gi * 5 + k) < .5 ? -1 : 1;
+        const ang = i => Math.atan2(DR[i].b.y - g.y, DR[i].b.x - g.x);
+        const mem = g.mem.slice().sort((p, q) => ang(p) - ang(q));
+        const slots = [...Array(m)].map((_, q) => [g.x + Math.cos(a0 + q * 2 * PI / m) * g.rho, g.y + Math.sin(a0 + q * 2 * PI / m) * g.rho]);
         let best = 0, bd = 1e9;
         for (let sh = 0; sh < m; sh++) { let d = 0; mem.forEach((i, q) => { const s = slots[(q + sh) % m]; d += Math.hypot(DR[i].b.x - s[0], DR[i].b.y - s[1]); }); if (d < bd) { bd = d; best = sh; } }
-        mem.forEach((i, q) => { const s = slots[(q + best) % m]; res[i] = { x: s[0], y: s[1], s: sg, m }; });
-      }
+        mem.forEach((i, q) => { const s = slots[(q + best) % m]; res[i] = { g: gi, x: s[0], y: s[1], s: sg, rm: g.rm }; });
+      });
       return res;
     }
 
-    const balls = [];
+    const balls = [], PS = [];
     return (t, dt) => {
       const k = clamp((t - T0) / 1.4, 0, 1), e = k * k * (3 - 2 * k);
       // Vòng logo: lắc nhẹ (poster ở t≈4.8 nhìn thẳng)
@@ -225,16 +242,25 @@
       const tt = Math.max(0, t - T0), kk = Math.floor(tt / T), u = tt / T - kk;
       if (kk !== pk) { pk = kk; plan = grouping(kk); }
       const w = e * smooth(clamp(Math.sin(u * PI) * 2.2, 0, 1)); // 0 = tách rời, 1 = đã gộp thành giọt lớn
-      balls.length = 0;
       DR.forEach((d, i) => {
         const f = .35 + hash(i) * .3;
-        let x = d.b.x + Math.sin(t * f + d.ph) * .28 * e, y = d.b.y + Math.cos(t * f * 1.3 + d.ph) * .32 * e, z = d.b.z + Math.sin(t * f * .8 + d.ph) * .3 * e, wet = 1;
+        let x = d.b.x + Math.sin(t * f + d.ph) * .28 * e, y = d.b.y + Math.cos(t * f * 1.3 + d.ph) * .32 * e, z = d.b.z + Math.sin(t * f * .8 + d.ph) * .3 * e, r = d.r;
         const p = plan[i];
-        if (p && w > 0) {                                       // bay vào vị trí trong nhóm; nhô ra trước/sau để không xuyên vòng logo
-          x += (p.x - x) * w; y += (p.y - y) * w; z += (0 - z) * w * .6 + p.s * 1.9 * w; wet = 1 + .05 * w;
+        if (p && !p.solo && w > 0) {                            // bay vào vị trí trong nhóm; nhô ra trước/sau để không xuyên vòng logo
+          x += (p.x - x) * w; y += (p.y - y) * w; z += (0 - z) * w * .6 + p.s * 1.9 * w; r += (p.rm - r) * w;
         }
-        balls.push([x, y, z, d.r * ISOK * wet]);
+        PS[i] = [x, y, z, r * K * (1 + .05 * w)];
       });
+      // Tránh dính nhầm: hạt khác nhóm luôn giữ khoảng cách (tách dần khi bắt đầu chuyển động → cụm ở poster tự rời ra)
+      const fac = .75 + .55 * e;
+      for (let it = 0; it < 3; it++) for (let i = 0; i < PS.length; i++) for (let j = i + 1; j < PS.length; j++) {
+        const gi = plan[i] ? plan[i].g : -1 - i, gj = plan[j] ? plan[j].g : -1 - j; if (gi === gj) continue;
+        const A = PS[i], B = PS[j], need = (A[3] + B[3]) * fac; let dx = B[0] - A[0], dy = B[1] - A[1], dd = Math.hypot(dx, dy);
+        if (dd >= need) continue; if (dd < 1e-4) { dx = 1; dy = 0; dd = 1; }
+        const o = (need - dd) / 2; A[0] -= dx / dd * o; A[1] -= dy / dd * o; B[0] += dx / dd * o; B[1] += dy / dd * o;
+      }
+      balls.length = 0;
+      PS.forEach(p => balls.push([p[0], p[1], p[2], p[3] / .575]));
       liq.update(balls);
     };
   });

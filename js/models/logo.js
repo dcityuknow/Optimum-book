@@ -63,63 +63,179 @@
     return g;
   }
 
-  /** Giọt phẳng nhiều thùy (hình hoa) — dùng cho các giọt "quatrefoil" trong concept. */
-  function blobGeometry(R, lobes, flat, amp = .34, off = 0) {
-    const g = new THREE.SphereGeometry(1, 56, 40), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), ph = Math.atan2(y, x), eq = x * x + y * y;
-      const r = R * (1 + amp * Math.cos(lobes * ph + off) * eq);
-      p.setXYZ(i, x * r, y * r, z * r * flat);
+  /* ================= GIỌT NƯỚC DẠNG TẤM (heightfield) =================
+   * Hình dạng giọt = đường đẳng trị của tổng trường 2D các bi (Wyvill w=(1-q²)³) → bi gần nhau tự dính thành
+   * viên thắt / tam giác / 4 thùy. Độ dày: h = T·√(2u−u²) với u = (G−ISO)/(GS−ISO) kẹp ≤ 1
+   *  → mép tròn đứng, vùng gộp (G ≥ GS) có MẶT PHẲNG; bi đơn lẻ gần như hình cầu.
+   * Mặt trên z = zc + h, mặt dưới z = zc − h; mép được "kéo" đúng lên đường đẳng trị bằng nội suy cạnh lưới. */
+  function Liquid(mat) {
+    const H = .045, GX = 7.6, GY = 7.0, ISO = .3, GS = .7, TK = .92;   // H: ô lưới; TK: độ dày so với bán kính bi
+    const NX = Math.ceil(2 * GX / H) + 1, NY = Math.ceil(2 * GY / H) + 1, NN = NX * NY;
+    const G = new Float32Array(NN), RW = new Float32Array(NN), ZW = new Float32Array(NN), GXA = new Float32Array(NN), GYA = new Float32Array(NN);
+    const vmap = new Int32Array(NN), seen = new Uint32Array(NN);
+    const MAXV = 90000, MAXI = 420000;
+    const pos = new Float32Array(MAXV * 3), nor = new Float32Array(MAXV * 3), idx = new Uint32Array(MAXI);
+    const geo = new THREE.BufferGeometry();
+    const pa = new THREE.BufferAttribute(pos, 3), na = new THREE.BufferAttribute(nor, 3), ia = new THREE.BufferAttribute(idx, 1);
+    pa.setUsage(THREE.DynamicDrawUsage); na.setUsage(THREE.DynamicDrawUsage); ia.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', pa); geo.setAttribute('normal', na); geo.setIndex(ia); geo.setDrawRange(0, 0);
+    const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+    let nv = 0, ni = 0, frame = 0;
+    const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], N8 = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+
+    function vert(i, j) {                                   // tạo cặp đỉnh (trên = id, dưới = id+1) cho nút lưới (i,j)
+      const v = i + NX * j; let id = vmap[v]; if (id >= 0) return id;
+      if (nv + 2 > MAXV) return -1;
+      id = nv; nv += 2; vmap[v] = id;
+      const g = G[v]; let px, py, pz, h = 0, nx = 0, ny = 0, nz = 1;
+      if (g > ISO) {
+        px = -GX + i * H; py = -GY + j * H; pz = ZW[v] / g;
+        const T = TK * RW[v] / g, u = (g - ISO) / (GS - ISO);
+        if (u < 1) {
+          const hh = Math.sqrt(2 * u - u * u), k = T * (1 - u) / Math.max(hh, .02) / (GS - ISO);
+          h = T * hh; nx = -k * GXA[v]; ny = -k * GYA[v]; const l = 1 / Math.hypot(nx, ny, 1); nx *= l; ny *= l; nz = l;
+        } else h = T;
+      } else {                                              // nút ngoài: kéo vào đường đẳng trị theo cạnh tới nút trong tốt nhất
+        let bn = -1, bg = ISO, bi = 0, bj = 0;
+        for (const L of [N4, N8]) {
+          for (const [di, dj] of L) {
+            const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= NX || b >= NY) continue;
+            const gn = G[a + NX * b]; if (gn > bg) { bg = gn; bn = a + NX * b; bi = a; bj = b; }
+          }
+          if (bn >= 0) break;
+        }
+        if (bn < 0) { px = -GX + i * H; py = -GY + j * H; pz = 0; }
+        else {
+          const t = (bg - ISO) / Math.max(bg - g, 1e-6), xn = -GX + bi * H, yn = -GY + bj * H;
+          px = xn + (-GX + i * H - xn) * t; py = yn + (-GY + j * H - yn) * t; pz = ZW[bn] / bg;
+          nx = -GXA[bn]; ny = -GYA[bn]; const l = Math.hypot(nx, ny);
+          if (l > 1e-9) { nx /= l; ny /= l; } else { nx = px - xn; ny = py - yn; const q = Math.hypot(nx, ny) || 1; nx /= q; ny /= q; }
+          nz = 0;
+        }
+      }
+      let o = id * 3; pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz + h; nor[o] = nx; nor[o + 1] = ny; nor[o + 2] = nz;
+      o += 3; pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz - h; nor[o] = nx; nor[o + 1] = ny; nor[o + 2] = -nz;
+      return id;
     }
-    g.computeVertexNormals(); return g;
+
+    /** B: mảng [x, y, z, R] — R = bán kính ảnh hưởng (mặt giọt đơn có bán kính 0.575·R). */
+    function update(B) {
+      frame++; nv = 0; ni = 0;
+      G.fill(0); RW.fill(0); ZW.fill(0); GXA.fill(0); GYA.fill(0); vmap.fill(-1);
+      const rg = [];
+      for (const [x, y, z, R] of B) {
+        const R2 = R * R, rr = R * .575;
+        const i0 = Math.max(1, Math.floor((x - R + GX) / H)), i1 = Math.min(NX - 2, Math.ceil((x + R + GX) / H));
+        const j0 = Math.max(1, Math.floor((y - R + GY) / H)), j1 = Math.min(NY - 2, Math.ceil((y + R + GY) / H));
+        for (let j = j0; j <= j1; j++) { const dy = -GY + j * H - y, b = NX * j;
+          for (let i = i0; i <= i1; i++) {
+            const dx = -GX + i * H - x, q = (dx * dx + dy * dy) / R2;
+            if (q < 1) { const w = 1 - q, w3 = w * w * w, d = -6 * w * w / R2, v = b + i;
+              G[v] += w3; RW[v] += w3 * rr; ZW[v] += w3 * z; GXA[v] += d * dx; GYA[v] += d * dy; }
+          } }
+        rg.push([i0 - 1, i1, j0 - 1, j1]);
+      }
+      for (const [i0, i1, j0, j1] of rg)
+        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+          const c = i + NX * j; if (seen[c] === frame) continue; seen[c] = frame;
+          if (!(G[c] > ISO || G[c + 1] > ISO || G[c + NX] > ISO || G[c + NX + 1] > ISO)) continue;
+          if (ni + 12 > MAXI) continue;
+          const a = vert(i, j), b = vert(i + 1, j), cc = vert(i + 1, j + 1), d = vert(i, j + 1);
+          if (a < 0 || b < 0 || cc < 0 || d < 0) continue;
+          idx[ni++] = a; idx[ni++] = b; idx[ni++] = cc; idx[ni++] = a; idx[ni++] = cc; idx[ni++] = d;          // mặt trên
+          idx[ni++] = a + 1; idx[ni++] = cc + 1; idx[ni++] = b + 1; idx[ni++] = a + 1; idx[ni++] = d + 1; idx[ni++] = cc + 1; // mặt dưới
+        }
+      pa.needsUpdate = na.needsUpdate = ia.needsUpdate = true; geo.setDrawRange(0, ni);
+    }
+    return { mesh, update, get tris() { return ni / 3; } };
   }
 
-  /** Viên "thuốc" thắt giữa (logo thu nhỏ) */
-  function pillGeometry(L, Rr) {
-    const g = new THREE.SphereGeometry(1, 48, 32), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), pin = 1 - .28 * Math.exp(-Math.pow(x / .28, 2));
-      p.setXYZ(i, x * L, y * Rr * pin, z * Rr * pin);
-    }
-    g.computeVertexNormals(); return g;
-  }
+  const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const smooth = x => x * x * (3 - 2 * x);
 
   O.registerModel('logo', (s, c) => {
     c.position.set(0, 0, 12);
     const env = makeEnv(), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    // Chất liệu như logo gốc: trắng xám satin, hơi mờ (không phải gương chrome)
+    // Vòng logo: trắng xám satin như logo gốc
     const chrome = new THREE.MeshStandardMaterial({ color: 0xdcdcdc, metalness: .03, roughness: .7, envMap: env, envMapIntensity: .15 });
+    // Giọt nước: bóng hơn vòng một chút
+    const liquid = new THREE.MeshStandardMaterial({ color: 0xe6e7ea, metalness: .03, roughness: .5, envMap: env, envMapIntensity: .3 });
     s.add(new THREE.HemisphereLight(0xffffff, 0x555a66, .82));
     const key = new THREE.DirectionalLight(0xffffff, .45); key.position.set(-1.5, 4, 9); s.add(key);
     const rim = new THREE.DirectionalLight(0xbfe9ff, .25); rim.position.set(5, -3, -4); s.add(rim);
+
+    // g: CHỈ chứa vòng logo + quầng sáng → xoay/lắc. Các giọt nằm ngoài g nên không xoay theo logo.
     const g = new THREE.Group(); s.add(g);
-
-    // Quầng sáng rất nhẹ phía sau để hologram có chiều sâu (poster gần như không thấy)
     const halo = glow(1.9, C.CY, .06); halo.position.z = -1.5; g.add(halo);
+    g.add(new THREE.Mesh(ringGeometry(), chrome));
 
-    const ring = new THREE.Mesh(ringGeometry(), chrome); g.add(ring);
+    const liq = Liquid(liquid); s.add(liq.mesh);
 
-    // --- Giọt trôi quanh logo ---
-    const drops = [];
-    const add = (mesh, x, y, z, sc = 1) => { mesh.position.copy(P(x, y, z)); mesh.scale.setScalar(sc); g.add(mesh); drops.push({ m: mesh, b: mesh.position.clone(), f: .5 + Math.random() * .6, p: Math.random() * 6.28, r: (Math.random() - .5) * .5 }); return mesh; };
-    const sph = (r) => new THREE.Mesh(new THREE.SphereGeometry(r * K, 36, 28), chrome);
+    // --- Các hạt nước (toạ độ px của concept bìa) ---
+    // Tất cả chỉ là bi tròn. Viên thắt / giọt tam giác / giọt 4 thùy KHÔNG dựng sẵn: chúng là 2/3/4 bi đứng sát nhau
+    // nên metaball tự dính thành đúng hình đó. Lúc đầu (poster) các bi đứng sẵn thành cụm như concept; sau đó tách ra.
+    const DR = [];
+    const ball = (x, y, z, r) => DR.push({ b: P(x, y, z), r, rp: r * K, ph: DR.length * 1.7 });
     [[100, 250, 17, .3], [383, 208, 8, -.2], [428, 321, 4, 0], [470, 326, 3, 0], [80, 556, 9, .2], [103, 538, 6, 0],
-      [168, 578, 17, .6], [80, 608, 23, .4], [452, 501, 12, -.3], [116, 556, 5, .1], [512, 292, 3, 0]].forEach(([x, y, r, z]) => add(sph(r), x, y, z));
-    add(new THREE.Mesh(pillGeometry(36 * K, 15 * K), chrome), 185, 250, .2);
-    add(new THREE.Mesh(blobGeometry(40 * K, 4, .55, .17, .3), chrome), 432, 243, .1).rotation.set(.35, -.25, .2);
-    add(new THREE.Mesh(blobGeometry(46 * K, 4, .55, .17, .8), chrome), 397, 558, .1).rotation.set(-.3, .3, -.15);
-    add(new THREE.Mesh(blobGeometry(25 * K, 3, .65, .2, 0), chrome), 340, 242, .2).rotation.set(.3, .2, 0);
-    add(new THREE.Mesh(blobGeometry(17 * K, 3, .65, .2, 1), chrome), 58, 472, .1);
+      [168, 578, 17, .6], [80, 608, 23, .4], [452, 501, 12, -.3], [116, 556, 5, .1], [512, 292, 3, 0]]
+      .forEach(([x, y, r, z]) => ball(x, y, z, Math.max(r, 9)));
+    const FR = [0, 0, .85, 1.0, 1.12];                          // bán kính vòng đặt bi theo số bi (× r): quyết định độ thắt
+    const cluster = (cx, cy, z, n, r, off) => { for (let q = 0; q < n; q++) { const a = off + q * 2 * PI / n, d = FR[n] * r; ball(cx + Math.cos(a) * d, cy - Math.sin(a) * d, z, r); } };
+    cluster(185, 250, .2, 2, 15, 0);                           // viên thắt giữa
+    cluster(340, 242, .2, 3, 14, PI / 2);                      // giọt tam giác
+    cluster(58, 472, .1, 3, 10, 1);
+    cluster(432, 243, .1, 4, 18, 0);                          // giọt 4 thùy
+    cluster(397, 558, .1, 4, 20, 0);
 
-    // Hologram: sau ~0.4s mới bắt đầu lắc/xoay nhẹ để ảnh poster (t≈4.8) luôn nhìn thẳng như concept
+    const T = 7.5, T0 = 5.2, ISOK = K / .575;         // chu kỳ dính–tách (giây); lúc bắt đầu; px→bán kính ảnh hưởng
+    let pk = -1, plan = [];
+    // Mỗi chu kỳ: chia các hạt thành nhóm 1/2/3/4 hạt (ngẫu nhiên có chủ đích, nhóm khác nhau mỗi lần),
+    // mỗi nhóm bay tới điểm gặp nhau và xếp thành: 2 = hàng đôi, 3 = tam giác, 4 = hình thoi/chữ thập.
+    function grouping(k) {
+      const n = DR.length, used = Array(n).fill(false), res = Array(n).fill(null);
+      const order = [...Array(n).keys()].sort((a, b) => hash(a * 7.3 + k * 13.1) - hash(b * 7.3 + k * 13.1));
+      for (const a of order) {
+        if (used[a]) continue; used[a] = true;
+        const r = hash(a * 1.9 + k * 9.1), want = r < .12 ? 1 : r < .45 ? 2 : r < .78 ? 3 : 4;
+        const cand = []; for (let b = 0; b < n; b++) if (!used[b]) { const d = DR[a].b.distanceTo(DR[b].b); if (d < 9) cand.push([b, d * (.3 + 1.4 * hash(a * 17 + b * 3 + k))]); }
+        cand.sort((p, q) => p[1] - q[1]);
+        const mem = [a, ...cand.slice(0, want - 1).map(q => q[0])]; mem.forEach(m => used[m] = true);
+        const m = mem.length; if (m < 2) continue;
+        const C = new V(); mem.forEach(i => C.add(DR[i].b)); C.multiplyScalar(1 / m);
+        let rm = 0; mem.forEach(i => rm += DR[i].rp); rm /= m;
+        const rho = FR[m] * rm, a0 = hash(a + k * 3.3) * 2 * PI, sg = hash(a * 5 + k) < .5 ? -1 : 1;
+        const ang = i => Math.atan2(DR[i].b.y - C.y, DR[i].b.x - C.x);
+        mem.sort((p, q) => ang(p) - ang(q));
+        const slots = [...Array(m)].map((_, q) => [C.x + Math.cos(a0 + q * 2 * PI / m) * rho, C.y + Math.sin(a0 + q * 2 * PI / m) * rho]);
+        let best = 0, bd = 1e9;
+        for (let sh = 0; sh < m; sh++) { let d = 0; mem.forEach((i, q) => { const s = slots[(q + sh) % m]; d += Math.hypot(DR[i].b.x - s[0], DR[i].b.y - s[1]); }); if (d < bd) { bd = d; best = sh; } }
+        mem.forEach((i, q) => { const s = slots[(q + best) % m]; res[i] = { x: s[0], y: s[1], s: sg, m }; });
+      }
+      return res;
+    }
+
+    const balls = [];
     return (t, dt) => {
-      const k = clamp((t - 5.2) / 1.4, 0, 1), e = k * k * (3 - 2 * k);
+      const k = clamp((t - T0) / 1.4, 0, 1), e = k * k * (3 - 2 * k);
+      // Vòng logo: lắc nhẹ (poster ở t≈4.8 nhìn thẳng)
       g.rotation.y = Math.sin(t * .72) * .95 * e; g.rotation.x = Math.sin(t * .47) * .3 * e;
-      drops.forEach(d => {
-        d.m.position.set(d.b.x + Math.sin(t * d.f + d.p) * .06 * e * 4, d.b.y + Math.cos(t * d.f * 1.3 + d.p) * .16 * e, d.b.z + Math.sin(t * d.f * .8 + d.p) * .5 * e);
-        d.m.rotation.z += d.r * dt * e;
-      });
       halo.material.opacity = .08 + .05 * Math.sin(t * 1.2) * e;
+
+      // Hạt nước: chuyển động riêng, độc lập với logo
+      const tt = Math.max(0, t - T0), kk = Math.floor(tt / T), u = tt / T - kk;
+      if (kk !== pk) { pk = kk; plan = grouping(kk); }
+      const w = e * smooth(clamp(Math.sin(u * PI) * 2.2, 0, 1)); // 0 = tách rời, 1 = đã gộp thành giọt lớn
+      balls.length = 0;
+      DR.forEach((d, i) => {
+        const f = .35 + hash(i) * .3;
+        let x = d.b.x + Math.sin(t * f + d.ph) * .28 * e, y = d.b.y + Math.cos(t * f * 1.3 + d.ph) * .32 * e, z = d.b.z + Math.sin(t * f * .8 + d.ph) * .3 * e, wet = 1;
+        const p = plan[i];
+        if (p && w > 0) {                                       // bay vào vị trí trong nhóm; nhô ra trước/sau để không xuyên vòng logo
+          x += (p.x - x) * w; y += (p.y - y) * w; z += (0 - z) * w * .6 + p.s * 1.9 * w; wet = 1 + .05 * w;
+        }
+        balls.push([x, y, z, d.r * ISOK * wet]);
+      });
+      liq.update(balls);
     };
   });
 })(window.OPT);

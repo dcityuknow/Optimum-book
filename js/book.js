@@ -127,12 +127,12 @@
       return;
     }
     if (!drag) {
-      if (e.pointerType !== 'mouse' || mob || !ok()) return; L.forEach(l => l.ht = 0);
+      if (e.pointerType !== 'mouse' || mob || !ok()) return; const ht0 = L.map(l => l.ht); L.forEach(l => l.ht = 0);
       const x = e.clientX, sx = spine(), P = px(), r = rc();
       if (e.clientY > r.top && e.clientY < r.bottom) {
         if (x > sx + P * .82 && x < sx + P * 1.05 && S < L.length) L[S].ht = .045; else if (x < sx - P * .82 && x > sx - P * 1.05 && S > 0) L[S - 1].ht = .045;
       }
-      run(); return;
+      if (L.some((l, i) => l.ht !== ht0[i])) run(); return;   // chỉ chạy lại khi góc trang thật sự đổi (tránh reset bộ đếm bật hologram)
     }
     const d = drag, dx = e.clientX - d.x0;
     if (!d.m && Math.abs(dx) > 8) {

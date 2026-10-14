@@ -1,0 +1,9 @@
+/* css/cursor.css — canvas vệt logo mờ
+ * (hình con trỏ logo do js/cursor.js tự chèn dưới dạng CSS cursor gốc của hệ điều hành) */
+#cur-trail {
+  position: fixed;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  z-index: 10000;                 /* trên sách và menu ngôn ngữ (9999) */
+  pointer-events: none;
+}

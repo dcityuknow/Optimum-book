@@ -1,0 +1,18 @@
+/* Cuốn sách 3D: sân khấu, tờ giấy, mặt trước/sau, gáy sách */
+#st{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:calc(56px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;perspective:2200px;touch-action:none;user-select:none;-webkit-user-select:none}
+#bk{position:relative;flex:none;width:var(--bw,600px);height:var(--ph,600px);transform-style:preserve-3d;font-size:var(--fs,16px)}
+.lf{position:absolute;top:0;left:var(--sp,0px);width:var(--pw,300px);height:100%;transform-origin:0 50%;transform-style:preserve-3d}
+.fc{position:absolute;inset:0;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:radial-gradient(120% 90% at 30% 10%,#171f4b,#0b1029 70%);border:1px solid var(--bd);border-radius:2px 8px 8px 2px;box-shadow:0 0 40px #4de3ff14}
+.fc.b{transform:rotateY(180deg);border-radius:8px 2px 2px 8px}
+.fc:before{content:"";position:absolute;inset:0;z-index:8;pointer-events:none;background:linear-gradient(90deg,#000a,#0000 11%)}
+.fc.b:before{background:linear-gradient(270deg,#000a,#0000 11%)}
+.sh{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0;background:linear-gradient(90deg,#000,#0006)}
+.fc.b .sh{background:linear-gradient(270deg,#000,#0006)}
+.sk{position:absolute;top:3px;bottom:3px;width:calc(var(--n,0)*1.6px);background:repeating-linear-gradient(90deg,#3a4780 0 1px,#0b1029 1px 3px)}
+.sk.r{left:100%;border-radius:0 3px 3px 0}.sk.l{right:100%;transform:scaleX(-1);border-radius:0 3px 3px 0}
+.mb .sk{display:none}
+.bs{position:absolute;top:-10px;bottom:-10px;width:calc(var(--pw) + 14px);transform:translateZ(-3px);background:linear-gradient(160deg,#1c2566,#0a0e2a);border:1px solid #4de3ff44;border-radius:8px;box-shadow:0 40px 70px #000d,0 0 50px #4de3ff22;transition:opacity .3s}
+.bs.r{left:calc(var(--sp) - 4px)}.bs.l{left:calc(var(--sp) - var(--pw) - 10px)}.mb .bs.l{display:none}
+.pg{position:absolute;inset:0;display:flex;flex-direction:column;padding:2.4em 2.2em 3em;overflow-y:auto;scrollbar-width:none;touch-action:pan-y}
+.pg::-webkit-scrollbar{display:none}
+.fo{position:absolute;left:0;right:0;bottom:1.2em;text-align:center;font:italic 300 .95em var(--sf);color:var(--mu);pointer-events:none}

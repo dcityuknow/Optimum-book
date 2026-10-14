@@ -1,0 +1,60 @@
+/* Nội dung trang: tiêu đề, danh sách, hình minh hoạ, slot 3D, thẻ số liệu... */
+.pg h2{font:600 2.1em/1.12 var(--sf);margin:.1em 0 .55em;letter-spacing:-.01em}
+.pg p{margin:0 0 1em;color:var(--mu);font-size:1.02em;line-height:1.65}
+.pg p b,.ls b{color:var(--tx);font-weight:600}
+.num{font:italic 300 3.4em/.9 var(--sf);color:var(--vi);opacity:.55;margin:0 0 .1em}
+code{font:500 .85em ui-monospace,Menlo,Consolas,monospace;color:var(--ac);background:#4de3ff14;padding:.1em .35em;border-radius:4px}
+.pg p a,.ls a{color:var(--ac);text-decoration:none;word-break:break-word}.pg p a:hover,.ls a:hover{text-decoration:underline}
+.src{font-size:.85em;color:var(--mu)}
+
+/* Bìa */
+.cv{justify-content:flex-end;padding:2.6em 2.4em;background:linear-gradient(160deg,#1b2160,#080b22)}
+.cv .art{position:absolute;left:0;right:0;top:0;width:100%;height:56%;object-fit:cover;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.cv .br{position:absolute;top:1.6em;left:1.9em;font:600 1.3em var(--sf);color:var(--ac);z-index:1}
+.cv h1{position:relative;font:600 2.4em/1.08 var(--sf);letter-spacing:-.02em;margin:0 0 .5em}
+.cv p{position:relative;color:var(--tx);opacity:.8;font-size:1em}
+.cv small{position:relative;color:var(--mu);font-size:.8em}
+.bc{justify-content:center;align-items:center;text-align:center}
+.bc b{font:600 2em var(--sf);color:var(--ac)}.bc p{max-width:16em}
+
+/* Hình minh hoạ SVG */
+.fig{position:relative;flex:none;margin:0 0 1.3em;border-radius:12px;overflow:hidden;border:1px solid var(--bd);background:#0a0f2a;aspect-ratio:5/3;box-shadow:0 8px 24px #0006}
+.fig img{display:block;width:100%;height:100%;object-fit:cover}
+.fig figcaption{position:absolute;left:0;right:0;bottom:0;padding:.5em .8em;font-size:.78em;color:var(--tx);background:linear-gradient(transparent,#050818ee);pointer-events:none}
+
+/* Slot mô hình 3D: ảnh poster + hologram bật lên khi trang dừng lại */
+.m3d{position:relative;flex:none;margin:0 0 1.3em;aspect-ratio:4/3;border-radius:12px;border:1px solid var(--bd);background:radial-gradient(70% 70% at 50% 60%,#4de3ff1f,#0a0f2a 75%);overflow:hidden}
+.m3d img{display:block;width:100%;height:100%;object-fit:contain;transition:opacity .5s;opacity:0}
+.m3d.ready img{opacity:1}.m3d.on img{opacity:.12}
+.m3d:before{content:"";position:absolute;left:50%;bottom:6%;width:60%;height:10%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(#4de3ff55,transparent 70%);z-index:0}
+.m3d .tag{position:absolute;top:.6em;right:.6em;z-index:2;font:600 .7em/1 'Be Vietnam Pro',sans-serif;letter-spacing:.08em;color:var(--ac);border:1px solid var(--ac);border-radius:99px;padding:.35em .7em;background:#0008}
+.m3d figcaption{position:absolute;left:0;right:0;bottom:0;padding:.5em .8em;font-size:.78em;color:var(--mu);background:linear-gradient(transparent,#050818ee);pointer-events:none}
+.stage{flex:1;aspect-ratio:auto;min-height:0}
+.stage-hd{margin:0 0 .5em}.stage-hd h2{margin:0}
+
+/* Danh sách & thẻ nhỏ */
+.ls{margin:0 0 .9em;padding:0;list-style:none;display:grid;gap:.85em;color:var(--mu);font-size:1em;line-height:1.6}
+.ls li{position:relative;padding-left:1.1em}.ls li:before{content:"";position:absolute;left:0;top:.7em;width:.4em;height:.4em;border-radius:50%;background:var(--ac)}
+.ls.ol{counter-reset:n}.ls.ol li{padding-left:1.8em}.ls.ol li:before{counter-increment:n;content:counter(n);background:none;width:auto;height:auto;top:0;color:var(--vi);font:italic 600 1.1em var(--sf)}
+.cm{display:grid;grid-template-columns:auto 1fr;gap:.55em .9em;align-items:baseline;font-size:.85em;color:var(--mu);margin-bottom:1em}
+.st4{display:grid;grid-template-columns:1fr 1fr;gap:.9em}.st4 div{border-left:2px solid var(--bd);padding-left:.7em;color:var(--mu);font-size:.8em;line-height:1.4}.st4 strong{display:block;color:var(--tx);font:600 1.7em/1.1 var(--sf);margin-bottom:.15em}
+.chips{display:grid;gap:.9em;color:var(--mu);font-size:.95em;margin-top:1em}
+.chips div{border-left:2px solid var(--bd);padding-left:.8em}.chips b{display:block;color:var(--tx)}
+.hud{margin-top:1.2em;color:var(--mu);font-size:.88em}
+.hud strong{display:block;color:var(--tx);font:600 1.9em/1.1 var(--sf);font-variant-numeric:tabular-nums}
+.ctl{display:flex;gap:10px;margin:.4em 0 .6em;flex-wrap:wrap}.ctl button{padding:7px 16px;font-size:13px}
+.hud2{display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin-top:.6em;font-size:.8em;color:var(--mu)}.hud2 b{display:block;font:600 1.6em var(--sf);font-variant-numeric:tabular-nums}
+.bw{margin:.6em 0;font-size:.82em;color:var(--mu)}
+.dots i{display:inline-block;width:.5em;height:.5em;margin:2px;border-radius:50%}
+.dots .r{background:var(--rd);box-shadow:0 0 8px var(--rd)}.dots .c{background:var(--ac);box-shadow:0 0 10px var(--ac)}.dots .off{background:#fff2}
+
+/* Roadmap, mục lục */
+.rl{position:relative;display:grid;gap:1em;margin-top:.4em;padding-left:2em;color:var(--mu);font-size:.88em}
+.rl:before{content:"";position:absolute;left:.4em;top:.5em;bottom:.5em;width:1px;background:linear-gradient(var(--ac),var(--vi),transparent)}
+.rl div{position:relative}.rl b{display:block;color:var(--tx);font:600 1.15em var(--sf)}
+.rl div:before{content:"";position:absolute;left:-2em;top:.35em;width:.85em;height:.85em;border-radius:50%;background:var(--vi);box-shadow:0 0 16px var(--vi)}
+.rl .now:before{background:var(--ac);box-shadow:0 0 18px var(--ac);animation:pl 1.8s ease-in-out infinite}
+@keyframes pl{50%{transform:scale(1.5)}}
+.toc{list-style:none;margin:.4em 0 0;padding:0}
+.toc li{display:flex;align-items:baseline;gap:.6em;padding:.45em 0;border-bottom:1px dotted var(--bd);color:var(--mu)}
+.toc a{margin-right:auto;color:var(--tx);text-decoration:none;font:500 1.05em var(--sf)}.toc a:hover{color:var(--ac)}

@@ -1,0 +1,9 @@
+/* Lớp hologram: canvas WebGL nổi trên sách, tia sáng, chớp sáng */
+#fx{position:fixed;inset:0;z-index:4;pointer-events:none}
+.holo{position:absolute;opacity:0;transform:scale(.3);transition:opacity .5s,transform 1s cubic-bezier(.2,.9,.2,1);pointer-events:none}
+.holo.up{opacity:1;transform:none}
+.hit{position:absolute;touch-action:none;cursor:grab;pointer-events:none}.hit.up{pointer-events:auto}.hit:active{cursor:grabbing}
+.beam{position:absolute;opacity:0;transition:opacity .8s;background:linear-gradient(#4de3ff00,#4de3ff66);clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);mix-blend-mode:screen;filter:blur(6px)}
+.beam.up{opacity:.85}
+.flash{position:absolute;width:60vmin;height:60vmin;margin:-30vmin 0 0 -30vmin;border-radius:50%;background:radial-gradient(#fff,#4de3ffaa 25%,#b28cff44 45%,transparent 70%);animation:fl .9s ease-out forwards;mix-blend-mode:screen}
+@keyframes fl{0%{opacity:0;transform:scale(.1)}22%{opacity:1}100%{opacity:0;transform:scale(1.5)}}

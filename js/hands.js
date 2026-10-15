@@ -141,6 +141,7 @@ HANDS.forEach((h,hi)=>{const T=h.T,M=mm(mm(mm(rY(T.ry),rX(T.rx)),rZ(T.rz)),T.bas
     grp.add(pts); grp.userData.isHands = true; pts.userData.isHands = true;
     pts.frustumCulled = false; pts.renderOrder = -1; grp.rotation.x = TILT;
     scene.add(grp);
+    GROUPS.push(ref(grp)); grp.visible = posterDepth === 0;       // đang dựng poster → ẩn
 
     const mv = new THREE.Matrix4(), dir = new THREE.Vector3(), tmpV = new THREE.Vector3();
     let last = -1, S = 1;
@@ -191,13 +192,33 @@ HANDS.forEach((h,hi)=>{const T=h.T,M=mm(mm(mm(rY(T.ry),rX(T.rx)),rZ(T.rz)),T.bas
     return grp;
   }
 
+  // Chỉ hiện tay khi mô hình 3D thật sự được hiển thị (live). Poster tĩnh trên trang sách (OPT.Models.poster) thì KHÔNG có tay:
+  // trong lúc poster chạy, mọi nhóm tay bị ẩn; xong thì hiện lại (nếu cảnh đó được dùng lại cho bản live).
+  const GROUPS = [];                                   // WeakRef tới các nhóm tay
+  const ref = g => window.WeakRef ? new WeakRef(g) : { deref: () => g };
+  const eachGroup = f => { for (let i = GROUPS.length - 1; i >= 0; i--) { const g = GROUPS[i].deref(); if (g) f(g); else GROUPS.splice(i, 1); } };
+  let posterDepth = 0, wrapped = false;
+  function wrapPoster() {
+    const M = O.Models;
+    if (wrapped || !M || typeof M.poster !== 'function') return;
+    wrapped = true;
+    const orig = M.poster;
+    M.poster = function () {
+      posterDepth++; eachGroup(g => { g.visible = false; });
+      try { return orig.apply(this, arguments); }
+      finally { posterDepth--; if (!posterDepth) eachGroup(g => { g.visible = true; }); }
+    };
+  }
+
   const api = O.hands = { enabled: true, skip: new Set(), build: () => cloud(), attach };
 
   // Bọc OPT.registerModel: sau khi mô hình dựng xong cảnh thì thêm tay (không đụng tới hàm tick/api trả về)
   const reg = O.registerModel;
+  wrapPoster();
   if (typeof reg !== 'function') { console.warn('hands.js: chưa có OPT.registerModel — nạp file này sau models-core.js'); return; }
   O.registerModel = function (name, factory) {
     return reg.call(this, name, function (s, c) {
+      wrapPoster();
       const tick = factory.apply(this, arguments);
       if (api.enabled && !api.skip.has(name)) { try { attach(s, c, name); } catch (e) { console.warn('hands.js', name, e); } }
       return tick;
